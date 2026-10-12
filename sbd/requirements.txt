@@ -1,1 +1,4 @@
-!pip install pandas influxdb-client
+pandas>=2.2
+influxdb-client>=1.38
+python-dotenv>=1.0
+paho-mqtt>=2.0
