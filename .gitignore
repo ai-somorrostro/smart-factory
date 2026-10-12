@@ -1,0 +1,6 @@
+# --- SBD capturas: secretos, entorno y datos generados ---
+sbd/.venv/
+sbd/.env
+sbd/datos/*.csv
+__pycache__/
+*.pyc
