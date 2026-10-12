@@ -1,4 +1,5 @@
 pandas>=2.2
-influxdb-client>=1.38
-python-dotenv>=1.0
-paho-mqtt>=2.0
+influxdb-client>=1.38 #Conectamos con Inlfuxdb
+python-dotenv>=1.0    #Cargamos variables de entorno desde .env
+paho-mqtt>=2.0        #Cliente MQTT para suscribirse a los topics de las impresoras
+ipykernel>=6.29       #Para poder ejecutar el script desde Jupyter Notebook
