@@ -1,3 +1,4 @@
+
 # Local secrets — never commit real tokens or credentials.
 pia/.env
 
@@ -25,3 +26,11 @@ data/
 
 # Esta carpeta, es una posibilidad de iniciarlizar un grafico en granafana, no quiero subir esto todavia
 #pia/grafana
+=======
+# --- SBD capturas: secretos, entorno y datos generados ---
+sbd/.venv/
+sbd/.env
+sbd/datos/*.csv
+__pycache__/
+*.pyc
+
