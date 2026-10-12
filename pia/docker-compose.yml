@@ -107,6 +107,35 @@ services:
       influxdb:
         condition: service_healthy
 
+  capturar_dobot:
+    build:
+      context: ../sbd
+      dockerfile: DockerFile
+    command: ["python", "scripts/capturar_dobot.py"]
+    restart: unless-stopped
+    env_file:
+      - ../sbd/.env
+
+    volumes:
+      - ../sbd/datos:/app/datos
+
+    networks:
+      - factory-net
+  capturarr_impresora:
+    build:
+      context: ../sbd
+      dockerfile: DockerFile
+    command: ["python", "scripts/capturar_impresora.py"]
+    restart: unless-stopped
+    env_file:
+      - ../sbd/.env
+
+    volumes:
+      - ../sbd/datos:/app/datos
+
+    networks:
+      - factory-net
+
 networks:
   factory-net:
     driver: bridge
