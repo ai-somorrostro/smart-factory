@@ -3,14 +3,21 @@ import struct
 import csv
 import time
 import os
+import sys
 from datetime import datetime
+from dotenv import load_dotenv
 
 # ==============================================================================
-# 1. CONFIGURACIÓN DE RUTAS Y ARCHIVOS (GUARDA EN sbd/data/ O sbd/datos/)
+# 1. CONFIGURACIÓN DE RUTAS Y ARCHIVOS (GUARDA EN sbd/datos/)
 # ==============================================================================
 
 # Averiguamos la carpeta exacta donde está guardado este script (sbd/scripts)
 RUTA_SCRIPT = os.path.dirname(os.path.abspath(__file__))
+
+# El fichero .env vive en la carpeta "sbd" (un nivel por encima), se resuelve
+# desde la ubicación del script para no depender del cwd desde el que se lanza
+RUTA_ENV = os.path.abspath(os.path.join(RUTA_SCRIPT, "..", ".env"))
+load_dotenv(RUTA_ENV)
 
 # Subimos un nivel ("..") a la carpeta "sbd" y luego entramos a "datos"
 CARPETA_DATA = os.path.abspath(os.path.join(RUTA_SCRIPT, "..", "datos"))
@@ -18,15 +25,47 @@ CARPETA_DATA = os.path.abspath(os.path.join(RUTA_SCRIPT, "..", "datos"))
 # Si la carpeta "sbd/datos" no existe en tu ordenador, el programa la crea automáticamente
 os.makedirs(CARPETA_DATA, exist_ok=True)
 
+
+def _require_env(name):
+    """Lee una variable obligatoria de sbd/.env o aborta nombrándola."""
+    value = os.getenv(name)
+    if value is None or str(value).strip() == "":
+        print(
+            f"ERROR: falta la variable obligatoria '{name}' en sbd/.env ({RUTA_ENV}).\n"
+            f"Copia sbd/.env.example a sbd/.env y rellena el valor."
+        )
+        sys.exit(1)
+    return str(value).strip()
+
+
+def _require_env_int(name):
+    try:
+        return int(_require_env(name))
+    except ValueError:
+        print(f"ERROR: la variable '{name}' debe ser un número entero (revisa sbd/.env).")
+        sys.exit(1)
+
+
+def _require_env_float(name):
+    try:
+        return float(_require_env(name))
+    except ValueError:
+        print(f"ERROR: la variable '{name}' debe ser un número decimal (revisa sbd/.env).")
+        sys.exit(1)
+
+
+# Nombre del CSV de salida (dentro de sbd/datos/)
+DOBOT_CSV_FILE = _require_env("DOBOT_CSV_FILE")
+
 # Ruta completa donde se guardará el archivo CSV
-CSV_FILE = os.path.join(CARPETA_DATA, "dataset_dobot_cr5a.csv")
+CSV_FILE = os.path.join(CARPETA_DATA, DOBOT_CSV_FILE)
 
 # ==============================================================================
-# 2. CONFIGURACIÓN DE RED Y MUESTREO DEL ROBOT DOBOT CR5A
+# 2. CONFIGURACIÓN DE RED Y MUESTREO DEL ROBOT DOBOT CR5A (desde sbd/.env)
 # ==============================================================================
-DOBOT_IP = "192.168.15.10"     # IP asignada al robot Dobot en la red local
-PORT_FEEDBACK = 30004         # Puerto TCP por el que el Dobot envía datos continuamente
-SAMPLE_INTERVAL = 0.5         # Tiempo de espera entre lecturas (0.5 segundos = 2 datos por segundo)
+DOBOT_IP = _require_env("DOBOT_IP")                  # IP del robot Dobot en la red local
+PORT_FEEDBACK = _require_env_int("DOBOT_PORT_FEEDBACK")       # Puerto TCP del feedback continuo
+SAMPLE_INTERVAL = _require_env_float("DOBOT_SAMPLE_INTERVAL")  # Segundos entre lecturas (0.5 = 2/s)
 
 # ==============================================================================
 # 3. CREACIÓN DEL ARCHIVO CSV (CABECERA)
@@ -50,10 +89,10 @@ def initialize_csv():
                 # --- Consumo eléctrico de los 6 motores (Amperios) ---
                 "j1_current", "j2_current", "j3_current", "j4_current", "j5_current", "j6_current"
             ])
-            print(f"📁 Dataset creado correctamente en: '{CSV_FILE}'")
+            print(f" Dataset creado correctamente en: '{CSV_FILE}'")
     except FileExistsError:
         # Si el archivo ya existía de antes, no lo borra, sigue añadiendo datos abajo
-        print(f"📄 Guardando datos en el dataset existente: '{CSV_FILE}'")
+        print(f" Guardando datos en el dataset existente: '{CSV_FILE}'")
 
 # ==============================================================================
 # 4. DECODIFICADOR DE DATOS DEL DOBOT (TRADUCE BYTES A NÚMEROS)
@@ -88,7 +127,7 @@ def parse_cr5a_feedback(data):
             "joint_currents": [round(c, 3) for c in joint_currents]
         }
     except Exception as e:
-        print(f"⚠️ Error al traducir los datos del robot: {e}")
+        print(f" Error al traducir los datos del robot: {e}")
         return None
 
 # ==============================================================================
@@ -98,7 +137,7 @@ def main():
     # 1. Prepara el archivo CSV dentro de sbd/data/
     initialize_csv()
     
-    print(f"🔌 Intentando conectar con el Dobot en {DOBOT_IP}:{PORT_FEEDBACK}...")
+    print(f" Intentando conectar con el Dobot en {DOBOT_IP}:{PORT_FEEDBACK}...")
     
     # Creamos la conexión de red (Socket TCP)
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -107,7 +146,7 @@ def main():
     try:
         # Conectamos con el robot
         sock.connect((DOBOT_IP, PORT_FEEDBACK))
-        print("✅ Conectado al Dobot CR5A. Capturando datos en tiempo real...")
+        print(" Conectado al Dobot CR5A. Capturando datos en tiempo real...")
         print("Para detener la captura en cualquier momento, presiona Ctrl + C en la terminal.\n")
 
         last_sample_time = 0 # Guarda el momento de la última lectura realizada
@@ -154,11 +193,11 @@ def main():
 
     except KeyboardInterrupt:
         # Se activa si pulsas Ctrl + C en la terminal
-        print("\n🛑 Captura detenida por el usuario. Todos los datos han quedado guardados de forma segura.")
+        print("\n Captura detenida por el usuario. Todos los datos han quedado guardados de forma segura.")
     except socket.timeout:
-        print(f"\n❌ Tiempo de espera agotado. Comprueba que el robot esté encendido y con la IP {DOBOT_IP}.")
+        print(f"\n Tiempo de espera agotado. Comprueba que el robot esté encendido y con la IP {DOBOT_IP}.")
     except Exception as e:
-        print(f"\n❌ Se produjo un error en la conexión con el Dobot: {e}")
+        print(f"\n Se produjo un error en la conexión con el Dobot: {e}")
     finally:
         # Cerramos la conexión de red al terminar
         sock.close()

@@ -3,7 +3,9 @@ import json
 import csv
 import threading
 import os
+import sys
 from datetime import datetime
+from dotenv import load_dotenv
 import paho.mqtt.client as mqtt
 
 # ==============================================================================
@@ -13,31 +15,53 @@ import paho.mqtt.client as mqtt
 # Averiguamos la carpeta exacta donde está guardado este script (sbd/scripts)
 RUTA_SCRIPT = os.path.dirname(os.path.abspath(__file__))
 
+# El fichero .env vive en la carpeta "sbd" (un nivel por encima), se resuelve
+# desde la ubicación del script para no depender del cwd desde el que se lanza y descargamos las variables de entorno
+RUTA_ENV = os.path.abspath(os.path.join(RUTA_SCRIPT, "..", ".env"))
+load_dotenv(RUTA_ENV)
+
 # Subimos un nivel ("..") a la carpeta raíz "sbd" y luego entramos a la carpeta "datos"
 CARPETA_DATA = os.path.abspath(os.path.join(RUTA_SCRIPT, "..", "datos"))
 
 # Si la carpeta "sbd/datos" no existe en tu ordenador, el programa la crea automáticamente
 os.makedirs(CARPETA_DATA, exist_ok=True)
 
+
+def _require_env(name):
+    """Lee una variable obligatoria de sbd/.env o aborta nombrándola."""
+    value = os.getenv(name)
+    if value is None or str(value).strip() == "":
+        print(
+            f"ERROR: falta la variable obligatoria '{name}' en sbd/.env ({RUTA_ENV}).\n"
+            f"Copia sbd/.env.example a sbd/.env y rellena el valor."
+        )
+        sys.exit(1)
+    return str(value).strip()
+
+
+# Nombre del CSV de salida (dentro de sbd/datos/)
+BAMBU_CSV_FILE = _require_env("BAMBU_CSV_FILE")
+
 # Definimos la ruta completa donde se guardará el archivo CSV dentro de "sbd/datos/"
-CSV_FILE = os.path.join(CARPETA_DATA, "dataset_bambu_multi_printer.csv")
+CSV_FILE = os.path.join(CARPETA_DATA, BAMBU_CSV_FILE)
 
 # ==============================================================================
-# 2. CONFIGURACIÓN DE LAS IMPRESORAS
+# 2. CONFIGURACIÓN DE LAS IMPRESORAS (desde sbd/.env)
 # ==============================================================================
-PRINTERS = [
-    {
-        "name": "Bambu_H2D_1",
-        "ip": "192.168.15.32",
-        "sn": "0948BB5B1600363",
-        "access_code": "bb7eb044"
-    },
-    {
-        "name": "Bambu_H2D_2",
-        "ip": "192.168.15.209",
-        "sn": "0948BB5B1601428",
-        "access_code": "86bf9c6a"
+
+def _load_printer(prefix):
+    """Construye la ficha de una impresora desde sus 4 variables en .env."""
+    return {
+        "name": _require_env(f"{prefix}_NAME"),
+        "ip": _require_env(f"{prefix}_IP"),
+        "sn": _require_env(f"{prefix}_SN"),
+        "access_code": _require_env(f"{prefix}_CODE"),
     }
+
+
+PRINTERS = [
+    _load_printer("BAMBU_H2D_1"),
+    _load_printer("BAMBU_H2D_2"),
 ]
 
 # Un "cerrojo" para evitar que dos impresoras escriban en el CSV a la vez y lo rompan
@@ -142,10 +166,10 @@ def initialize_csv():
                 "mc_print_stage", "tray_type", "mc_percent", "layer_num",
                 "total_layer_num", "nozzle_temp", "bed_temp"
             ])
-        print(f"📁 Archivo CSV creado correctamente en: '{CSV_FILE}'")
+        print(f" Archivo CSV creado correctamente en: '{CSV_FILE}'")
     except FileExistsError:
         # Si ya existía, continúa guardando datos ahí
-        print(f"📄 Guardando datos en el CSV existente: '{CSV_FILE}'")
+        print(f" Guardando datos en el CSV existente: '{CSV_FILE}'")
 
 
 def create_mqtt_client(printer_info):
@@ -160,10 +184,10 @@ def create_mqtt_client(printer_info):
 
     def on_connect(client, userdata, flags, rc, properties=None):
         if rc == 0:
-            print(f"✅ [{printer_name}] Conectado correctamente ({ip})")
+            print(f" [{printer_name}] Conectado correctamente ({ip})")
             client.subscribe(topic) # Se suscribe para recibir los mensajes
         else:
-            print(f"❌ [{printer_name}] Error de conexión (Código: {rc})")
+            print(f" [{printer_name}] Error de conexión (Código: {rc})")
 
     def on_message(client, userdata, msg):
         """Se ejecuta CADA VEZ que la impresora manda un mensaje"""
@@ -203,7 +227,7 @@ def create_mqtt_client(printer_info):
                 print(f"[{timestamp[:19]}] {printer_name} | Mat: {tray_type} | Capa: {layer_num}/{total_layer_num} ({mc_percent}%) | Temp: {nozzle_temp}°C")
 
         except Exception as e:
-            print(f"⚠️ Error procesando mensaje de {printer_name}: {e}")
+            print(f" Error procesando mensaje de {printer_name}: {e}")
 
     # Creación del cliente MQTT para la impresora
     client = mqtt.Client(client_id=f"recorder_{printer_name}_{sn}")
@@ -220,7 +244,7 @@ def create_mqtt_client(printer_info):
         client.connect(ip, 8883, keepalive=60)
         client.loop_forever() # Mantiene la conexión escuchando datos
     except Exception as e:
-        print(f"❌ Error en la conexión con {printer_name}: {e}")
+        print(f" Error en la conexión con {printer_name}: {e}")
 
 
 # ==============================================================================
@@ -237,8 +261,8 @@ if __name__ == "__main__":
         threads.append(t)
         t.start()
 
-    print(f"🚀 Capturando datos de {len(PRINTERS)} impresoras en paralelo...")
-    print(f"📁 Guardando archivo CSV en: {CSV_FILE}")
+    print(f" Capturando datos de {len(PRINTERS)} impresoras en paralelo...")
+    print(f" Guardando archivo CSV en: {CSV_FILE}")
     print("Para detener la captura, presiona Ctrl + C en la terminal.\n")
 
     # 3. Mantiene el script en marcha
@@ -246,4 +270,4 @@ if __name__ == "__main__":
         for t in threads:
             t.join()
     except KeyboardInterrupt:
-        print("\n🛑 Captura detenida por el usuario.")
+        print("\n Captura detenida por el usuario.")
