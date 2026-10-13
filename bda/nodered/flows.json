@@ -178,7 +178,8 @@
         "wires": [
             [
                 "d_out",
-                "ac7f979eaee47d56"
+                "ac7f979eaee47d56",
+                "mq_nuevas"
             ]
         ]
     },
@@ -235,6 +236,106 @@
         "bucket": "mir",
         "x": 1030,
         "y": 260,
+        "wires": []
+    },
+    {
+        "id": "mq_nuevas",
+        "type": "function",
+        "z": "mir_multi_tab",
+        "name": "elegir órdenes nuevas",
+        "func": "// PASO 1: de todo lo que llega de arriba, solo nos interesa la cola de órdenes.\n// Si es otra cosa (status, posiciones...), no hacemos nada.\nif (msg.topic !== 'mission_queue' || !Array.isArray(msg.payload)) return null;\n\n// PASO 2: de la lista de órdenes, nos quedamos solo con las terminadas ('Done').\nconst terminadas = msg.payload.filter(orden => orden.state === 'Done');\nif (terminadas.length === 0) return null;\n\n// PASO 3: cada orden tiene un número (id) que va creciendo.\n// Buscamos el número de la orden terminada más reciente.\nconst ultimaId = Math.max(...terminadas.map(orden => orden.id));\n\n// PASO 4: el nodo tiene una pequeña memoria ('context').\n// Miramos hasta qué orden revisamos la vez anterior y guardamos la de ahora.\nconst clave = 'revisada_' + msg.robot_id;\nconst revisadaAntes = context.get(clave);\ncontext.set(clave, ultimaId);\n\n// PASO 5: la primera vez no hay nada guardado. En ese caso revisamos\n// también las últimas 30 órdenes, para tener datos desde el principio.\nconst desde = (revisadaAntes === undefined) ? ultimaId - 30 : revisadaAntes;\n\n// PASO 6: las órdenes nuevas son las terminadas después de 'desde'.\nconst nuevas = terminadas.filter(orden => orden.id > desde);\n\n// PASO 7: por cada orden nueva, preparamos una petición para pedir su detalle\n// (con sus horas) al robot que corresponde.\nconst ip = { mir1: '192.168.15.5', mir2: '192.168.15.15' };\nreturn [nuevas.map(orden => ({\n    robot_id: msg.robot_id,\n    url: 'http://' + ip[msg.robot_id] + '/api/v2.0.0/mission_queue/' + orden.id,\n    headers: {\n        'Authorization': 'Basic ' + env.get(msg.robot_id.toUpperCase() + '_TOKEN'),\n        'Accept-Language': 'en_US'\n    }\n}))];",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 420,
+        "y": 240,
+        "wires": [
+            [
+                "mq_http_detalle",
+                "e1f14397b7eb2ffc"
+            ]
+        ]
+    },
+    {
+        "id": "mq_http_detalle",
+        "type": "http request",
+        "z": "mir_multi_tab",
+        "name": "GET detalle",
+        "method": "GET",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 610,
+        "y": 320,
+        "wires": [
+            [
+                "mq_calc"
+            ]
+        ]
+    },
+    {
+        "id": "mq_calc",
+        "type": "function",
+        "z": "mir_multi_tab",
+        "name": "calcular delay",
+        "func": "// PASO 1: si el robot no ha respondido bien, no hacemos nada.\nif (msg.statusCode !== 200) return null;\n\n// PASO 2: guardamos la respuesta del robot con un nombre más corto.\nconst orden = msg.payload;\n\n// PASO 3: comprobamos que vienen las tres horas que necesitamos.\n// Si falta alguna, avisamos en el panel de depuración con los campos que sí vienen.\nif (!orden.ordered || !orden.started || !orden.finished) {\n    node.warn('Faltan horas. Campos recibidos: ' + Object.keys(orden).join(', '));\n    return null;\n}\n\n// PASO 4: convertimos cada hora en un número de milisegundos para poder restarlas.\nconst horaPedida = Date.parse(orden.ordered);   // cuando se mandó la orden\nconst horaInicio = Date.parse(orden.started);   // cuando el robot empezó\nconst horaFin    = Date.parse(orden.finished);  // cuando el robot terminó\n\n// PASO 5: calculamos los tiempos en segundos (dividimos entre 1000).\nconst espera   = (horaInicio - horaPedida) / 1000;  // el delay: de mandar a empezar\nconst duracion = (horaFin - horaInicio) / 1000;     // lo que tardó en hacerla\nconst total    = (horaFin - horaPedida) / 1000;     // de mandar a terminar\n\n// PASO 6: preparamos el dato para InfluxDB.\n// Primer bloque: los valores. Segundo bloque: la etiqueta con el robot.\nmsg.payload = [\n    {\n        espera_s: espera,\n        duracion_s: duracion,\n        total_s: total,\n        time: new Date(horaPedida)   // el dato se guarda con la hora en que se mandó la orden\n    },\n    { robot: msg.robot_id }\n];\n\n// PASO 7: le decimos al nodo de InfluxDB dónde guardarlo y lo enviamos.\nmsg.measurement = 'mir_misiones';\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 800,
+        "y": 320,
+        "wires": [
+            [
+                "21875fcf26e2bdf1",
+                "dedbd5b15c2c43c5"
+            ]
+        ]
+    },
+    {
+        "id": "e1f14397b7eb2ffc",
+        "type": "debug",
+        "z": "mir_multi_tab",
+        "name": "debug 1",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 580,
+        "y": 380,
+        "wires": []
+    },
+    {
+        "id": "dedbd5b15c2c43c5",
+        "type": "debug",
+        "z": "mir_multi_tab",
+        "name": "debug 2",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 960,
+        "y": 380,
         "wires": []
     }
 ]
