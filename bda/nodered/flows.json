@@ -250,7 +250,7 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 420,
+        "x": 440,
         "y": 240,
         "wires": [
             [
@@ -337,5 +337,13 @@
         "x": 960,
         "y": 380,
         "wires": []
+    },
+    {
+        "id": "ec35a99ae510673e",
+        "type": "global-config",
+        "env": [],
+        "modules": {
+            "node-red-contrib-influxdb": "0.7.0"
+        }
     }
 ]
