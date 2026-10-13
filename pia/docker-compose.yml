@@ -23,13 +23,11 @@ services:
       DOCKER_INFLUXDB_INIT_PASSWORD: "${INFLUXDB_INIT_PASSWORD}"
       DOCKER_INFLUXDB_INIT_ORG: "${INFLUXDB_ORG}"
       DOCKER_INFLUXDB_INIT_BUCKET: "${INFLUXDB_BUCKET_MIR}"
-      #DOCKER_INFLUXDB_INIT_RETENTION: "${INFLUXDB_RETENTION}"
       DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: "${INFLUXDB_TOKEN}"
 
       INFLUXDB_ORG: "${INFLUXDB_ORG}"
       INFLUXDB_BUCKET_PRINTER: "${INFLUXDB_BUCKET_PRINTER}"
       INFLUXDB_BUCKET_DOBOT: "${INFLUXDB_BUCKET_DOBOT}"
-      #INFLUXDB_RETENTION: "${INFLUXDB_RETENTION}"
 
     volumes:
       - influxdb2-data:/var/lib/influxdb2
@@ -129,7 +127,7 @@ services:
     restart: unless-stopped
     env_file:
       - ../sbd/.env
-
+  
     volumes:
       - ../sbd/datos:/app/datos
 

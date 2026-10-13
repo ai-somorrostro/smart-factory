@@ -1,0 +1,319 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "id": 10,
+      "title": "En_uso",
+      "description": "",
+      "type": "bargauge",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 8,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb"
+          },
+          "query": "from(bucket: \"mir\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"mir_status\" and r._field == \"state_id\")\n  |> group(columns: [\"robot\"])\n  |> sort(columns: [\"_time\"])\n  |> elapsed(unit: 1s)\n  |> filter(fn: (r) => r.elapsed <= 60)\n  |> map(fn: (r) => ({ r with estado: if float(v: r._value) == 5.0 then \"En uso\" else \"Parado\" }))\n  |> group(columns: [\"robot\", \"estado\"])\n  |> sum(column: \"elapsed\")\n  |> rename(columns: {elapsed: \"_value\"})",
+          "hide": false
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "displayMode": "gradient",
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "maxVizHeight": 300,
+        "minVizHeight": 16,
+        "minVizWidth": 8,
+        "namePlacement": "auto",
+        "orientation": "horizontal",
+        "showUnfilled": true,
+        "sizing": "auto",
+        "valueMode": "color"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "displayName": "${__field.labels.robot} · ${__field.labels.estado}",
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "dark-blue"
+              },
+              {
+                "value": 80,
+                "color": "red"
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 9,
+      "title": "Delay",
+      "description": "",
+      "type": "stat",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb"
+      },
+      "gridPos": {
+        "x": 8,
+        "y": 0,
+        "w": 8,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb"
+          },
+          "query": "from(bucket: \"mir\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"mir_misiones\" and r._field == \"espera_s\")\n  |> group(columns: [\"robot\"])\n  |> max()",
+          "hide": false
+        }
+      ],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "showPercentChange": false,
+        "textMode": "value_and_name",
+        "wideLayout": true,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "displayName": "${__field.labels.robot}",
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "blue"
+              },
+              {
+                "value": 80,
+                "color": "red"
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "Sin misiones"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 11,
+      "title": "Rendimiento",
+      "description": "",
+      "type": "gauge",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb"
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 0,
+        "w": 8,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb"
+          },
+          "query": "from(bucket: \"mir\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"mir_misiones\" and r._field == \"espera_s\")\n  |> group(columns: [\"robot\"])\n  |> map(fn: (r) => ({ r with _value: if float(v: r._value) >= 10.0 then 0.0 else 100.0 - float(v: r._value) * 10.0 }))\n  |> mean()",
+          "hide": false
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "barShape": "flat",
+        "barWidthFactor": 0.5,
+        "effects": {
+          "barGlow": false,
+          "centerGlow": false,
+          "gradient": true
+        },
+        "endpointMarker": "point",
+        "minVizHeight": 75,
+        "minVizWidth": 75,
+        "orientation": "auto",
+        "segmentCount": 1,
+        "segmentSpacing": 0.3,
+        "shape": "gauge",
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true,
+        "sizing": "auto",
+        "sparkline": true,
+        "textMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "displayName": "${__field.labels.robot}",
+          "unit": "percent",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "dark-blue"
+              },
+              {
+                "value": 80,
+                "color": "red"
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 8,
+      "title": "Historial_acciones",
+      "description": "",
+      "type": "table",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 8,
+        "w": 24,
+        "h": 10
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb"
+          },
+          "query": "import \"regexp\"\n\nfrom(bucket: \"mir\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"mir_status\" and r._field == \"mission_text\")\n  |> filter(fn: (r) => exists r.robot)\n  |> group(columns: [\"robot\"])\n  |> aggregateWindow(every: 1m, fn: last, createEmpty: false)\n  |> filter(fn: (r) => r._value =~ /^(Moving|Docking) to \\x27[^\\x27]+\\x27/)\n  |> map(fn: (r) => {\n      nombre = regexp.replaceAllString(r: /\\x27/, v: regexp.findString(r: /\\x27[^\\x27]+\\x27/, v: r._value), t: \"\")\n      return {r with _value: if r._value =~ /^Docking/ then \"Carga en estación (\" + nombre + \")\" else nombre}\n  })\n  |> group()\n  |> pivot(rowKey: [\"_time\"], columnKey: [\"robot\"], valueColumn: \"_value\")\n  |> sort(columns: [\"_time\"], desc: true)\n  |> rename(columns: {_time: \"hora\"})\n  |> keep(columns: [\"hora\", \"mir1\", \"mir2\"])",
+          "hide": false
+        }
+      ],
+      "options": {
+        "cellHeight": "sm",
+        "showHeader": true
+      },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 80,
+                "color": "red"
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "json-view"
+            },
+            "inspect": false
+          }
+        },
+        "overrides": []
+      }
+    }
+  ],
+  "preload": false,
+  "schemaVersion": 39,
+  "tags": [],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "INFO_MIR_RESPONSABLES",
+  "uid": "mir-responsables",
+  "version": 1
+}
