@@ -1,0 +1,417 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "id": 1,
+      "title": "Seta_dada",
+      "description": "",
+      "type": "stat",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 9,
+        "h": 5
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb"
+          },
+          "query": "from(bucket: \"dobot\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"dobot_telemetry\" and r._field == \"robot_mode\")\n  |> last()\n  |> map(fn: (r) => ({r with _value: if r._value == 9.0 then \"EMERGENCIA\" else \"OK\"}))\n  |> keep(columns: [\"_time\", \"_value\"])",
+          "hide": false
+        }
+      ],
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/^Value$/",
+          "values": false
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "EMERGENCIA": {
+                  "color": "dark-red",
+                  "index": 0
+                },
+                "OK": {
+                  "color": "dark-green",
+                  "index": 1
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 80,
+                "color": "red"
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 4,
+      "title": "Tiempo_uso",
+      "description": "",
+      "type": "stat",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb"
+      },
+      "gridPos": {
+        "x": 9,
+        "y": 0,
+        "w": 15,
+        "h": 6
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb"
+          },
+          "query": "from(bucket: \"dobot\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"dobot_telemetry\")\n  |> filter(fn: (r) => r._field == \"pos_x\" or r._field == \"pos_y\" or r._field == \"pos_z\")\n  |> aggregateWindow(every: 10s, fn: mean, createEmpty: false)\n  |> difference(nonNegative: false)\n  |> map(fn: (r) => ({r with _value: if r._value > 1.0 or r._value < -1.0 then 1 else 0}))\n  |> group(columns: [\"_time\"])\n  |> max()\n  |> group()\n  |> sum()\n  |> map(fn: (r) => ({_time: now(), _value: r._value * 10}))",
+          "hide": false
+        }
+      ],
+      "options": {
+        "colorMode": "none",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "dthms",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "dark-blue"
+              },
+              {
+                "value": 80,
+                "color": "dark-blue"
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "0"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 2,
+      "title": "Cuantas_setas",
+      "description": "",
+      "type": "stat",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 5,
+        "w": 9,
+        "h": 5
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb"
+          },
+          "query": "from(bucket: \"dobot\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"dobot_telemetry\" and r._field == \"robot_mode\")\n  |> map(fn: (r) => ({r with _value: if int(v: r._value) == 9 then 1 else 0}))\n  |> difference(nonNegative: true)\n  |> filter(fn: (r) => r._value > 0)\n  |> group()\n  |> count()\n  |> map(fn: (r) => ({_time: now(), _value: r._value}))",
+          "hide": false
+        }
+      ],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "dark-red"
+              },
+              {
+                "value": 80,
+                "color": "red"
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds",
+            "fixedColor": "#ad46ff"
+          },
+          "noValue": "No hubo seta de emergencia"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 3,
+      "title": "Posición_home",
+      "description": "",
+      "type": "stat",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb"
+      },
+      "gridPos": {
+        "x": 9,
+        "y": 6,
+        "w": 15,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb"
+          },
+          "query": "home_x = 0.0\nhome_y = 140.0\nhome_z = -40.0\ntol_pos = 15.0\n\nfrom(bucket: \"dobot\")\n  |> range(start: -7d)\n  |> filter(fn: (r) => r._measurement == \"dobot_telemetry\")\n  |> filter(fn: (r) => r._field == \"pos_x\" or r._field == \"pos_y\" or r._field == \"pos_z\")\n  |> last()\n  |> pivot(rowKey: [\"_time\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> map(fn: (r) => ({\n      _time: r._time,\n      _value:\n        if (r.pos_x - home_x) < tol_pos and (home_x - r.pos_x) < tol_pos\n          and (r.pos_y - home_y) < tol_pos and (home_y - r.pos_y) < tol_pos\n          and (r.pos_z - home_z) < tol_pos and (home_z - r.pos_z) < tol_pos\n        then \"EN HOME\" else \"FUERA DE HOME\"\n  }))\n  |> keep(columns: [\"_time\", \"_value\"])",
+          "hide": false
+        }
+      ],
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/^Value$/",
+          "values": false
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "EN HOME": {
+                  "color": "dark-green",
+                  "index": 0
+                },
+                "FUERA DE HOME": {
+                  "color": "dark-red",
+                  "index": 1
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 80,
+                "color": "red"
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "no está en home"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 5,
+      "title": "Ejecutando???",
+      "description": "",
+      "type": "stat",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 10,
+        "w": 9,
+        "h": 3
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb"
+          },
+          "query": "from(bucket: \"dobot\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"dobot_telemetry\")\n  |> filter(fn: (r) => r._field == \"pos_x\")\n  |> toFloat()\n  |> reduce(\n      identity: {minimo: 1000000.0, maximo: -1000000.0},\n      fn: (r, accumulator) => ({\n        minimo: if r._value < accumulator.minimo then r._value else accumulator.minimo,\n        maximo: if r._value > accumulator.maximo then r._value else accumulator.maximo\n      })\n  )\n  |> map(fn: (r) => ({_time: now(), _value: if r.maximo - r.minimo > 2.0 then \"HUBO MOVIMIENTO\" else \"SIN MOVIMIENTO\"}))",
+          "hide": false
+        }
+      ],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/^Value$/",
+          "values": false
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "EJECUTANDO": {
+                  "color": "green",
+                  "index": 0
+                },
+                "PARADO": {
+                  "color": "#808080",
+                  "index": 1
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 80,
+                "color": "red"
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "sin datos"
+        },
+        "overrides": []
+      }
+    }
+  ],
+  "preload": false,
+  "refresh": "5s",
+  "schemaVersion": 39,
+  "tags": [],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-7d",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "INFO_DOBOT",
+  "uid": "dobot-info",
+  "version": 1
+}
