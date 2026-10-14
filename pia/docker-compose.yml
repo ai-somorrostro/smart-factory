@@ -3,9 +3,7 @@
 #   cp .env.example .env
 #   docker compose up -d
 #
-# InfluxDB is initialized automatically on first boot:
-# - organization: smart-factory
-# - buckets: mir_robots, 3d_printers, dobot
+
 
 name: smart-factory
 
@@ -89,6 +87,11 @@ services:
       INFLUXDB_ORG: "${INFLUXDB_ORG}"
       INFLUXDB_TOKEN: "${INFLUXDB_TOKEN}"
 
+      # Organizacion unica de Grafana: todo cae en la org id=1 (Smartek).
+      GF_USERS_ALLOW_ORG_CREATE: "${GF_USERS_ALLOW_ORG_CREATE:-false}"
+      GF_USERS_AUTO_ASSIGN_ORG: "${GF_USERS_AUTO_ASSIGN_ORG:-true}"
+      GF_USERS_AUTO_ASSIGN_ORG_ID: "${GF_USERS_AUTO_ASSIGN_ORG_ID:-1}"
+
       #Modificación de SMTP del grafana.ini
       GF_SMTP_ENABLED: "${GF_SMTP_ENABLED}"
       GF_SMTP_HOST: "${GF_SMTP_HOST}"
@@ -108,6 +111,37 @@ services:
 
     depends_on:
       influxdb:
+        condition: service_healthy
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  # One-shot idempotente: renombra la org id=1 a Smartek en cada arranque.
+  # No toca influxdb, nodered ni capturadores; solo habla con Grafana.
+  grafana-init-org:
+    image: curlimages/curl:8.22.0
+    container_name: smartek-grafana-init-org
+    entrypoint: ["sh", "/scripts/rename-org.sh"]
+    restart: "no"
+
+    environment:
+      GRAFANA_URL: "${GRAFANA_URL}"
+      GRAFANA_ORG_NAME: "${GRAFANA_ORG_NAME}"
+      GF_SECURITY_ADMIN_USER: "${GF_SECURITY_ADMIN_USER}"
+      GF_SECURITY_ADMIN_PASSWORD: "${GF_SECURITY_ADMIN_PASSWORD}"
+
+    volumes:
+      - ./grafana-init:/scripts:ro
+
+    networks:
+      - factory-net
+
+    depends_on:
+      grafana:
         condition: service_healthy
 
   capturar_dobot:

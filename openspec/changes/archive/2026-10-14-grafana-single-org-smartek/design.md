@@ -5,7 +5,7 @@
 See proposal.md (Why) and `specs/monitoring-stack/spec.md` for required behavior.
 
 Current state (observed in repo):
-- `pia/docker-compose.yml` runs Grafana 13.2.2 with `grafana-data` named volume, `GF_SECURITY_ADMIN_*` + SMTP from `.env`, and file provisioning for one InfluxDB datasource + `Verify buckets` dashboard (no `org_id` set, so both land in org id=1).
+- `pia/docker-compose.yml` runs Grafana 13.2.2 with `grafana-data` named volume, `GF_SECURITY_ADMIN_*` + SMTP from `.env`, and file provisioning for one InfluxDB datasource, file dashboards (`INFO_MIRS`, `INFO_MIR_RESPONSABLES`, `Info_Bambu`, `INFO_DOBOT`) and alerting (`alertas.yml`, `contactPoint.yml`) — all pinned to org id=1 with no `Main Org.` leftover expected.
 - No `GF_USERS_*` org-lockdown vars are set today.
 - Grafana auto-creates `Main Org. (id=1)` on first boot with an empty volume; there is no `GF_ORG_NAME`-style variable to choose the initial name. Rename must happen after boot via API/UI.
 - `smart-factory_grafana-data` volume already exists (Grafana up), `influxdb2-data` is a separate volume and must not be touched.
@@ -32,7 +32,7 @@ Current state (observed in repo):
 - Alternative considered: relying on operator discipline alone. Rejected: a single OAuth/signup or misclick recreates the multi-org state this change removes.
 
 ### D3: Camino A migration — deliberate `grafana-data` reset, InfluxDB volumes untouched
-- The supported path to a clean single-org state is `down` + remove **only** the Grafana volume + `up`, then let rename + provisioning reconverge. Datasource and `Verify buckets` reappear from `bda/grafana/` with no manual import.
+- The supported path to a clean single-org state is `down` + remove **only** the Grafana volume + `up`, then let rename + provisioning reconverge. Datasource, dashboards and alert rules reappear from `bda/grafana/` with no manual import.
 - Explicitly out: `down -v` without a volume filter (would also drop `influxdb2-data`), and deleting/recreating orgs from the UI to "fix ids" on the live volume.
 
 ## Risks / Trade-offs
@@ -47,7 +47,7 @@ Current state (observed in repo):
 1. Inventory UI-made Grafana state worth keeping (users, alert rules, manual dashboards/keys); export or accept loss.
 2. Apply compose/config changes, then `down` + remove only the Grafana volume + `up`.
 3. Wait for Grafana healthy, run idempotent rename to `Smartek`, verify org list shows exactly one org.
-4. Verify datasource + `Verify buckets` panels return data; verify InfluxDB org/buckets/points unchanged.
+4. Verify datasource + provisioned dashboards/alerts return data; verify InfluxDB org/buckets/points unchanged.
 5. Rollback: config-only revert + (if needed) restore of the pre-change `grafana-data` volume backup; InfluxDB needs no rollback.
 
 ## Open Questions
