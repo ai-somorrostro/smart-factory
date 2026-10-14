@@ -18,8 +18,6 @@ data/
 *.backup
 
 # Permitir el Dockerfile de Node-RED
-!bda/
-!bda/nodered/
 !bda/nodered/DockerFile
 
 # Logs and OS noise.
