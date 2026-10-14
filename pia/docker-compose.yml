@@ -44,17 +44,16 @@ services:
       start_period: 30s
 
   nodered:
-    image: nodered/node-red:latest
+    build:
+      context: ../bda/nodered
+      dockerfile: Dockerfile
+    image: smartek-nodered:latest
     container_name: smartek-nodered
     restart: unless-stopped
     ports:
       - "${NODE_RED_PORT:-1880}:1880"
 
-    
-    # Ejecutamos con -c el comando de detras en shell.
-    # Este comando es para la instalacion de node-red-contrib-influxdb y para iniciar node-red.
-    command: > 
-      sh -c "npm install --save node-red-contrib-influxdb && exec npm start"  
+      
 
     environment:
       INFLUXDB_URL: "${INFLUXDB_URL:-http://influxdb:8086}"
