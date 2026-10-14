@@ -46,7 +46,7 @@ services:
   nodered:
     build:
       context: ../bda/nodered
-      dockerfile: DockerFIle
+      dockerfile: DockerFile
     image: smartek-nodered:latest
     container_name: smartek-nodered
     restart: unless-stopped
