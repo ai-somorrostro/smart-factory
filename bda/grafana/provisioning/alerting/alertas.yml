@@ -1,6 +1,6 @@
 apiVersion: 1
 groups:
-    - orgId: 2
+    - orgId: 1
       name: bambu1
       folder: bambu
       interval: 10s
@@ -13,7 +13,7 @@ groups:
               relativeTimeRange:
                 from: 600
                 to: 0
-              datasourceUid: bg0lrubbj4hdsb
+              datasourceUid: influxdb
               model:
                 intervalMs: 1000
                 maxDataPoints: 43200
@@ -78,7 +78,7 @@ groups:
           isPaused: false
           notification_settings:
             receiver: smartek-alarmas
-    - orgId: 2
+    - orgId: 1
       name: bambu2
       folder: bambu
       interval: 10s
@@ -91,7 +91,7 @@ groups:
               relativeTimeRange:
                 from: 600
                 to: 0
-              datasourceUid: bg0lrubbj4hdsb
+              datasourceUid: influxdb
               model:
                 intervalMs: 1000
                 maxDataPoints: 43200
@@ -156,7 +156,7 @@ groups:
           isPaused: false
           notification_settings:
             receiver: smartek-alarmas
-    - orgId: 2
+    - orgId: 1
       name: mir1
       folder: mir
       interval: 10s
@@ -169,7 +169,7 @@ groups:
               relativeTimeRange:
                 from: 300
                 to: 0
-              datasourceUid: bg0lrubbj4hdsb
+              datasourceUid: influxdb
               model:
                 intervalMs: 1000
                 maxDataPoints: 43200
@@ -243,7 +243,7 @@ groups:
               relativeTimeRange:
                 from: 600
                 to: 0
-              datasourceUid: bg0lrubbj4hdsb
+              datasourceUid: influxdb
               model:
                 intervalMs: 1000
                 maxDataPoints: 43200
@@ -309,7 +309,7 @@ groups:
           isPaused: false
           notification_settings:
             receiver: smartek-alarmas
-    - orgId: 2
+    - orgId: 1
       name: mir2
       folder: mir
       interval: 10s
@@ -322,7 +322,7 @@ groups:
               relativeTimeRange:
                 from: 600
                 to: 0
-              datasourceUid: bg0lrubbj4hdsb
+              datasourceUid: influxdb
               model:
                 instant: false
                 intervalMs: 1000
@@ -403,7 +403,7 @@ groups:
               relativeTimeRange:
                 from: 600
                 to: 0
-              datasourceUid: bg0lrubbj4hdsb
+              datasourceUid: influxdb
               model:
                 instant: false
                 intervalMs: 1000
@@ -471,7 +471,7 @@ groups:
           isPaused: false
           notification_settings:
             receiver: smartek-alarmas
-    - orgId: 2
+    - orgId: 1
       name: dobot1
       folder: dobot
       interval: 10s
@@ -484,7 +484,7 @@ groups:
               relativeTimeRange:
                 from: 600
                 to: 0
-              datasourceUid: bg0lrubbj4hdsb
+              datasourceUid: influxdb
               model:
                 intervalMs: 1000
                 maxDataPoints: 43200
