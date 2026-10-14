@@ -16,6 +16,7 @@ data/
 **/.config.nodes.json*
 **/.config.runtime.json*
 *.backup
+! bda/nodered/DockerFile
 
 # Logs and OS noise.
 *.log
