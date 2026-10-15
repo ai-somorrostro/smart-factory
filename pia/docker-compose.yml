@@ -78,7 +78,7 @@ services:
     container_name: smartek-grafana
     restart: unless-stopped
     ports:
-      - "${GRAFANA_PORT:-3000}:3000"
+      - "${GRAFANA_PORT}:3000"
 
     environment:
       GF_SECURITY_ADMIN_USER: "${GF_SECURITY_ADMIN_USER}"
@@ -125,6 +125,7 @@ services:
   grafana-init-org:
     image: curlimages/curl:8.22.0
     container_name: smartek-grafana-init-org
+    user : root
     entrypoint: ["sh", "/scripts/rename-org.sh"]
     restart: "no"
 
@@ -136,6 +137,7 @@ services:
 
     volumes:
       - ./grafana-init:/scripts:ro
+      - mcp-secrets:/secrets
 
     networks:
       - factory-net
@@ -143,7 +145,27 @@ services:
     depends_on:
       grafana:
         condition: service_healthy
-
+  mcp-grafana:
+    image: grafana/mcp-grafana:latest
+    container_name: smartek-mcp-grafana
+    restart: unless-stopped
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >
+        export GRAFANA_SERVICE_ACCOUNT_TOKEN="$$(cat /run/mcp-secrets/GRAFANA_SERVICE_ACCOUNT_TOKEN)";
+        exec /app/mcp-grafana -t streamable-http -address 0.0.0.0:8000
+        --enabled-tools=search,datasource,influxdb,alerting,dashboard,folder
+    environment:
+      GRAFANA_URL: "http://grafana:3000"
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - mcp-secrets:/run/mcp-secrets:ro
+    networks:
+      - factory-net
+    depends_on:
+      grafana-init-org:
+        condition: service_completed_successfully
   capturar_dobot:
     build:
       context: ../sbd
@@ -180,3 +202,4 @@ networks:
 volumes:
   influxdb2-data:
   grafana-data:
+  mcp-secrets:

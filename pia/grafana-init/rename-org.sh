@@ -42,14 +42,15 @@ BODY="$(curl  --silent --show-error --max-time 10 -u "${GF_SECURITY_ADMIN_USER}:
 # Comprobamos de la variable Body /name es el mismo que la variable de nuestro entornor
 # EN caso de ser asi mostramos un mensaje que todo ha sido correcto
 # ;; terminamos el case
+NECESITA_REENOMBRADO=1
 case "${BODY}" in
   *"\"name\":\"${ORG_NAME}\""*)
     echo "OK: la organizacion ya es '${ORG_NAME}', nada que hacer."
-    exit 0
+    NECESITA_REENOMBRADO=0
     ;;
 esac
 
-echo "-> renombrando organizacion a '${ORG_NAME}' ..."
+
 # En este momento realizamos el cambio 
 # \ la barra invertida al final nos permite continuar en la siguiente linea
 # if !, comprueba si el comando curl falla, en caso de que falle mostramos un mensaje de error y salimos con exit 1
@@ -57,12 +58,55 @@ echo "-> renombrando organizacion a '${ORG_NAME}' ..."
 # -H, para explicar el formato que enviamos, en este caso JSON
 # -d, para indicar los datos que enviamos, en este caso el nombre de la organizacion
 # Si no ha devuelto error, mostramos un mensaje de que todo ha ido bien
-if ! curl --silent --show-error --max-time 10 --retry 5 --retry-delay 3 --retry-all-errors \
-    -u "${GF_SECURITY_ADMIN_USER}:${GF_SECURITY_ADMIN_PASSWORD}" \
-    -X PUT -H "Content-Type: application/json" \
-    -d "{\"name\":\"${ORG_NAME}\"}" \
-    "${GRAFANA_URL}/api/org"; then
-  echo "ERROR: no se pudo renombrar (revisa las credenciales de admin)" >&2
-  exit 1
+if [ "${NECESITA_REENOMBRADO}" = "1" ]; then
+  echo "-> renombrando organizacion a '${ORG_NAME}' ..."
+  if ! curl --silent --show-error --max-time 10 --retry 5 --retry-delay 3 --retry-all-errors \
+      -u "${GF_SECURITY_ADMIN_USER}:${GF_SECURITY_ADMIN_PASSWORD}" \
+      -X PUT -H "Content-Type: application/json" \
+      -d "{\"name\":\"${ORG_NAME}\"}" \
+      "${GRAFANA_URL}/api/org"; then
+    echo "ERROR: no se pudo renombrar (revisa las credenciales de admin)" >&2
+    exit 1
+  fi
+  echo "OK: organizacion renombrada a '${ORG_NAME}'."
 fi
-echo "OK: organizacion renombrada a '${ORG_NAME}'."
+
+# Token de service account para el MCP de Grafana
+TOKEN_FILE=/secrets/GRAFANA_SERVICE_ACCOUNT_TOKEN
+SA_NAME=mcp-grafana
+AUTH="${GF_SECURITY_ADMIN_USER}:${GF_SECURITY_ADMIN_PASSWORD}"
+
+if [ -s "${TOKEN_FILE}" ]; then
+  echo "OK: el token del MCP ya existe, nada que hacer."
+else
+  echo "-> preparando service account '${SA_NAME}' ..."
+
+  # Reutiliza la service account si ya existe
+  SA_ID="$(curl -sf -u "${AUTH}" "${GRAFANA_URL}/api/serviceaccounts/search?query=${SA_NAME}" \
+    | sed -n 's/.*"serviceAccounts":\[{"id":\([0-9]*\).*/\1/p')"
+
+  if [ -z "${SA_ID}" ]; then
+    SA_ID="$(curl -sf -u "${AUTH}" -H 'Content-Type: application/json' \
+      -d "{\"name\":\"${SA_NAME}\",\"role\":\"Viewer\"}" \
+      "${GRAFANA_URL}/api/serviceaccounts" \
+      | sed -n 's/.*"id":\([0-9]*\).*/\1/p')"
+  fi
+  if [ -z "${SA_ID}" ]; then
+    echo "ERROR: no se pudo crear/localizar la service account" >&2
+    exit 1
+  fi
+
+  # Nombre de token unico para que no choque con intentos anteriores
+  KEY="$(curl -sf -u "${AUTH}" -H 'Content-Type: application/json' \
+    -d "{\"name\":\"${SA_NAME}-$(date +%s)\"}" \
+    "${GRAFANA_URL}/api/serviceaccounts/${SA_ID}/tokens" \
+    | sed -n 's/.*"key":"\([^"]*\)".*/\1/p')"
+  if [ -z "${KEY}" ]; then
+    echo "ERROR: no se pudo generar el token" >&2
+    exit 1
+  fi
+
+  umask 022
+  printf '%s' "${KEY}" > "${TOKEN_FILE}"
+  echo "OK: token guardado en ${TOKEN_FILE}."
+fi
