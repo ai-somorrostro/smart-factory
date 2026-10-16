@@ -1,6 +1,6 @@
 
 # Local secrets — never commit real tokens or credentials.
-pia/.env
+.env
 
 # Local Docker bind-mount data (named volumes live in Docker, but any
 # future host data dirs must stay out of git).
