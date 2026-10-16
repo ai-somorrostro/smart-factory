@@ -58,6 +58,8 @@ esac
 # -H, para explicar el formato que enviamos, en este caso JSON
 # -d, para indicar los datos que enviamos, en este caso el nombre de la organizacion
 # Si no ha devuelto error, mostramos un mensaje de que todo ha ido bien
+
+#En caso de necesitar renombrar la organizacion, realizamos el cambio mediante un PUT a la API de Grafana
 if [ "${NECESITA_REENOMBRADO}" = "1" ]; then
   echo "-> renombrando organizacion a '${ORG_NAME}' ..."
   if ! curl --silent --show-error --max-time 10 --retry 5 --retry-delay 3 --retry-all-errors \
@@ -76,36 +78,55 @@ TOKEN_FILE=/secrets/GRAFANA_SERVICE_ACCOUNT_TOKEN
 SA_NAME=mcp-grafana
 AUTH="${GF_SECURITY_ADMIN_USER}:${GF_SECURITY_ADMIN_PASSWORD}"
 
+#  Si tengo el archivo no genero el token
 if [ -s "${TOKEN_FILE}" ]; then
   echo "OK: el token del MCP ya existe, nada que hacer."
 else
   echo "-> preparando service account '${SA_NAME}' ..."
 
   # Reutiliza la service account si ya existe
-  SA_ID="$(curl -sf -u "${AUTH}" "${GRAFANA_URL}/api/serviceaccounts/search?query=${SA_NAME}" \
+  # Sed sirve para extraer texto
+  # Mediante sed -n, extrae solo las lineas que coinciden con el patron, es decir, que contengan "serviceAccounts" y "id"
+  # Guarda el valor del id en la variable SA_ID
+  SA_ID="$(curl --silent --show-error --max-time 10 --retry 5 --retry-delay 3 --fail --retry-all-errors \
+    -u "${AUTH}" "${GRAFANA_URL}/api/serviceaccounts/search?query=${SA_NAME}" \
     | sed -n 's/.*"serviceAccounts":\[{"id":\([0-9]*\).*/\1/p')"
 
+  # Con ese id, comprobamos si la service account existe, en caso de que no exista, la creamos mediante un POST a la API de Grafana
+  # Service account es para poder conectarnos a Grafana sin usuario y contraseña, sino con un token de acceso
+  # En caso de no existir lo creamos, con el nombre de la service account y el rol de Viewer, que es el que necesitamos para el MCP, mediante un JSON
+  # En caso de existir lo atrapamos con el sed y lo guardamos en la variable SA_ID
+
+
   if [ -z "${SA_ID}" ]; then
-    SA_ID="$(curl -sf -u "${AUTH}" -H 'Content-Type: application/json' \
+    SA_ID="$(curl --silent --show-error --max-time 10 --retry 5 --retry-delay 3 --fail --retry-all-errors \
+      -u "${AUTH}" -H 'Content-Type: application/json' \
       -d "{\"name\":\"${SA_NAME}\",\"role\":\"Viewer\"}" \
       "${GRAFANA_URL}/api/serviceaccounts" \
       | sed -n 's/.*"id":\([0-9]*\).*/\1/p')"
   fi
+
+  # Comprobamos que la variable tenga valor
   if [ -z "${SA_ID}" ]; then
     echo "ERROR: no se pudo crear/localizar la service account" >&2
     exit 1
   fi
 
-  # Nombre de token unico para que no choque con intentos anteriores
-  KEY="$(curl -sf -u "${AUTH}" -H 'Content-Type: application/json' \
+  # Mediante Curl, hacemos una peticion POST a la API de Grafana 
+  # Para generar un token de acceso para la service account, con el nombre de la service account y la fecha actual en segundos
+  # Mediante sed, extraemos el valor del token de acceso y lo guardamos en la variable KEY
+  KEY="$(curl --silent --show-error --max-time 10 --retry 5 --retry-delay 3 --fail --retry-all-errors \
+    -u "${AUTH}" -H 'Content-Type: application/json' \
     -d "{\"name\":\"${SA_NAME}-$(date +%s)\"}" \
     "${GRAFANA_URL}/api/serviceaccounts/${SA_ID}/tokens" \
     | sed -n 's/.*"key":"\([^"]*\)".*/\1/p')"
+
+  # Comprobacion de que el token se ha generado  
   if [ -z "${KEY}" ]; then
     echo "ERROR: no se pudo generar el token" >&2
     exit 1
   fi
-
+ # Guardamos el token, en la variable KEY, en un archivo, con umask 022 para que todos los usuarios puedan leerlo
   umask 022
   printf '%s' "${KEY}" > "${TOKEN_FILE}"
   echo "OK: token guardado en ${TOKEN_FILE}."
