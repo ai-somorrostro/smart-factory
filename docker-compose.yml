@@ -29,7 +29,7 @@ services:
 
     volumes:
       - influxdb2-data:/var/lib/influxdb2
-      - ./influxdb/initdb.d:/docker-entrypoint-initdb.d
+      - ./pia/influxdb/initdb.d:/docker-entrypoint-initdb.d
 
     networks:
       - factory-net
@@ -43,7 +43,7 @@ services:
 
   nodered:
     build:
-      context: ../bda/nodered
+      context: ./bda/nodered
       dockerfile: DockerFile
     image: smartek-nodered:latest
     container_name: smartek-nodered
@@ -64,7 +64,7 @@ services:
       MIR2_TOKEN: "${MIR2_TOKEN}"
 
     volumes:
-      - ../bda/nodered:/data
+      - ./bda/nodered:/data
 
     networks:
       - factory-net
@@ -103,8 +103,8 @@ services:
 
     volumes:
       - grafana-data:/var/lib/grafana
-      - ../bda/grafana/provisioning:/etc/grafana/provisioning
-      - ../bda/grafana/dashboards:/var/lib/grafana/dashboards
+      - ./bda/grafana/provisioning:/etc/grafana/provisioning
+      - ./bda/grafana/dashboards:/var/lib/grafana/dashboards
 
     networks:
       - factory-net
@@ -136,7 +136,7 @@ services:
       GF_SECURITY_ADMIN_PASSWORD: "${GF_SECURITY_ADMIN_PASSWORD}"
 
     volumes:
-      - ./grafana-init:/scripts:ro
+      - ./pia/grafana-init:/scripts:ro
       - mcp-secrets:/secrets
 
     networks:
@@ -152,7 +152,7 @@ services:
     entrypoint: ["/bin/sh", "-c"]
     command:
       - >
-        export GRAFANA_SERVICE_ACCOUNT_TOKEN="$$(cat /run/mcp-secrets/GRAFANA_SERVICE_ACCOUNT_TOKEN)";
+        export GRAFANA_SERVICE_ACCOUNT_TOKEN="$$(cat /secrets/GRAFANA_SERVICE_ACCOUNT_TOKEN)";
         exec /app/mcp-grafana -t streamable-http -address 0.0.0.0:8000
         --enabled-tools=search,datasource,influxdb,alerting,dashboard,folder
     environment:
@@ -160,7 +160,7 @@ services:
     ports:
       - "127.0.0.1:8000:8000"
     volumes:
-      - mcp-secrets:/run/mcp-secrets:ro
+      - mcp-secrets:/secrets:ro
     networks:
       - factory-net
     depends_on:
@@ -168,29 +168,29 @@ services:
         condition: service_completed_successfully
   capturar_dobot:
     build:
-      context: ../sbd
+      context: ./sbd
       dockerfile: DockerFile
     command: ["python", "scripts/capturar_dobot.py"]
     restart: unless-stopped
     env_file:
-      - ../sbd/.env
+      - ./.env
 
     volumes:
-      - ../sbd/datos:/app/datos
+      - ./sbd/datos:/app/datos
 
     networks:
       - factory-net
   capturarr_impresora:
     build:
-      context: ../sbd
+      context: ./sbd
       dockerfile: DockerFile
     command: ["python", "scripts/capturar_impresora.py"]
     restart: unless-stopped
     env_file:
-      - ../sbd/.env
+      - ./.env
   
     volumes:
-      - ../sbd/datos:/app/datos
+      - ./sbd/datos:/app/datos
 
     networks:
       - factory-net
