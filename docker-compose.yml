@@ -57,9 +57,10 @@ services:
       INFLUXDB_URL: "${INFLUXDB_URL:-http://influxdb:8086}"
       INFLUXDB_ORG: "${INFLUXDB_ORG}"
       INFLUXDB_BUCKET_MIR: "${INFLUXDB_BUCKET_MIR}"
-      INFLUXDB_BUCKET_PRINTER: "${INFLUXDB_BUCKET_PRINTER}"
-      INFLUXDB_BUCKET_DOBOT: "${INFLUXDB_BUCKET_DOBOT}"
+      INFLUXDB_HOST: "${INFLUXDB_HOST}"
       INFLUXDB_TOKEN: "${INFLUXDB_TOKEN}"
+      MIR1_IP: "${MIR1_IP}"
+      MIR2_IP: "${MIR2_IP}"
       MIR1_TOKEN: "${MIR1_TOKEN}"
       MIR2_TOKEN: "${MIR2_TOKEN}"
 
@@ -156,9 +157,9 @@ services:
         exec /app/mcp-grafana -t streamable-http -address 0.0.0.0:8000
         --enabled-tools=search,datasource,influxdb,alerting,dashboard,folder
     environment:
-      GRAFANA_URL: "http://grafana:3000"
+      GRAFANA_URL: "${GRAFANA_URL}"
     ports:
-      - "127.0.0.1:8000:8000"
+      - "${MCP_GRAFANA_PORT:-8000}:8000"
     volumes:
       - mcp-secrets:/secrets:ro
     networks:
