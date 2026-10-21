@@ -1,8 +1,8 @@
 
-FROM nodered/node-red:4.1
+    FROM nodered/node-red:4.1
 
-COPY package.json package-lock.json /data/
+    COPY package.json package-lock.json /data/
 
-RUN cd /data && npm ci --omit=dev --no-fund --no-update-notifier
+    RUN cd /data && npm ci --omit=dev --no-fund --no-update-notifier
 
-ENTRYPOINT ["/usr/src/node-red/entrypoint.sh"]
+    ENTRYPOINT ["/usr/src/node-red/entrypoint.sh"]
