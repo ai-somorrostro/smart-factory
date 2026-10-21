@@ -147,9 +147,9 @@ services:
       grafana:
         condition: service_healthy
   mcp-grafana:
-    image: grafana/mcp-grafana:latest
+    image: grafana/mcp-grafana:2.0.2
     container_name: smartek-mcp-grafana
-    restart: unless-stopped
+    restart: unless-stopped 
     entrypoint: ["/bin/sh", "-c"]
     command:
       - >
@@ -181,7 +181,7 @@ services:
 
     networks:
       - factory-net
-  capturarr_impresora:
+  capturar_impresora:
     build:
       context: ./sbd
       dockerfile: DockerFile

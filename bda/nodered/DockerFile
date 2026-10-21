@@ -1,5 +1,8 @@
-# Imagen base fijada a una versión concreta (evita sorpresas con :latest)
-FROM nodered/node-red:latest
 
-# Instalamos el nodo de InfluxDB dentro de la imagen (en /usr/src/node-red)
-RUN npm install --no-fund --no-update-notifier node-red-contrib-influxdb
+FROM nodered/node-red:4.1
+
+COPY package.json package-lock.json /data/
+
+RUN cd /data && npm ci --omit=dev --no-fund --no-update-notifier
+
+ENTRYPOINT ["/usr/src/node-red/entrypoint.sh"]
