@@ -181,6 +181,9 @@ services:
 
     networks:
       - factory-net
+    depends_on:
+      influxdb:
+        condition: service_healthy
   capturar_impresora:
     build:
       context: ./sbd
@@ -195,6 +198,47 @@ services:
 
     networks:
       - factory-net
+    depends_on:
+      influxdb:
+        condition: service_healthy
+
+  enviar_impresora:
+    build:
+      context: ./sbd
+      dockerfile: DockerFile
+    command: ["python", "scripts/exportar_datos_bambu.py"]
+    restart: unless-stopped
+    env_file:
+      - ./.env
+  
+    volumes:
+      - ./sbd/datos:/app/datos
+      - ./.env:/app/.env:ro
+
+    networks:
+      - factory-net
+    depends_on:
+      influxdb:
+        condition: service_healthy
+
+  enviar_dobot:
+    build:
+      context: ./sbd
+      dockerfile: DockerFile
+    command: ["python", "scripts/exportar_datos_dobot.py"]
+    restart: unless-stopped
+    env_file:
+      - ./.env
+  
+    volumes:
+      - ./sbd/datos:/app/datos
+      - ./.env:/app/.env:ro
+
+    networks:
+      - factory-net
+    depends_on:
+      influxdb:
+        condition: service_healthy
 
 networks:
   factory-net:
