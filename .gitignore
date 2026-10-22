@@ -27,3 +27,7 @@ sbd/datos/*.csv
 # --- SBD capturas: secretos, entorno y datos generados ---
 __pycache__/
 *.pyc
+
+# Archivos notebook de Jupyter
+sbd/notebooks/bambu_influx.ipynb
+sbd/notebooks/dobot_influx.ipynb
