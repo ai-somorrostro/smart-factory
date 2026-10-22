@@ -1,38 +1,29 @@
-
-# Local secrets — never commit real tokens or credentials.
+# Variables de entorno y secretos de ejecución (no subir al repositorio).
 .env
 
-# Local Docker bind-mount data (named volumes live in Docker, but any
-# future host data dirs must stay out of git).
-
-
-# Redundancia del entorno de ejecucion y los secretos de Node-RED: el archivo «pia/nodered/.gitignore» es la
+# Redundancia del entorno de ejecucion y los secretos de Node-RED: el archivo «bda/nodered/.gitignore» es la
 # fuente de referencia, pero estos patrones raíz mantienen los secretos en el equipo local incluso si el
 # archivo anidado se elimina o se mueve.
-**/node_modules/ 
-**/.npm/ # Cache de node
-**/flows_cred.json # credenciales
+**/node_modules/
+# Cache de node
+**/.npm/
+# Credenciales de Node-RED
+**/flows_cred.json
 **/.flows*.backup
 **/.config.nodes.json*
 **/.config.runtime.json*
 *.backup
 
-# Permitir el Dockerfile de Node-RED
-!bda/nodered/DockerFile
 
-# Logs and OS noise.
-*.log
-.DS_Store
+# Entornos virtuales de Python (raíz o anidados).
+.venv/
 
-# La plantilla debe seguir siendo objeto de seguimiento aunque **/.env se amplíe.
-!pia/.env.example
+# Logs, ruido del sistema operativo y metadatos
+*:Zone.Identifier
 
-# Esta carpeta, es una posibilidad de iniciarlizar un grafico en granafana, no quiero subir esto todavia
-#pia/grafana
-=======
+# Datos generados por los capturadores
+sbd/datos/*.csv
+
 # --- SBD capturas: secretos, entorno y datos generados ---
-sbd/.venv/
-sbd/.env
 __pycache__/
 *.pyc
-
