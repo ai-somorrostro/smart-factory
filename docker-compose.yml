@@ -57,9 +57,10 @@ services:
       INFLUXDB_URL: "${INFLUXDB_URL:-http://influxdb:8086}"
       INFLUXDB_ORG: "${INFLUXDB_ORG}"
       INFLUXDB_BUCKET_MIR: "${INFLUXDB_BUCKET_MIR}"
-      INFLUXDB_BUCKET_PRINTER: "${INFLUXDB_BUCKET_PRINTER}"
-      INFLUXDB_BUCKET_DOBOT: "${INFLUXDB_BUCKET_DOBOT}"
+      INFLUXDB_HOST: "${INFLUXDB_HOST}"
       INFLUXDB_TOKEN: "${INFLUXDB_TOKEN}"
+      MIR1_IP: "${MIR1_IP}"
+      MIR2_IP: "${MIR2_IP}"
       MIR1_TOKEN: "${MIR1_TOKEN}"
       MIR2_TOKEN: "${MIR2_TOKEN}"
 
@@ -146,9 +147,9 @@ services:
       grafana:
         condition: service_healthy
   mcp-grafana:
-    image: grafana/mcp-grafana:latest
+    image: grafana/mcp-grafana:2.0.2
     container_name: smartek-mcp-grafana
-    restart: unless-stopped
+    restart: unless-stopped 
     entrypoint: ["/bin/sh", "-c"]
     command:
       - >
@@ -156,9 +157,9 @@ services:
         exec /app/mcp-grafana -t streamable-http -address 0.0.0.0:8000
         --enabled-tools=search,datasource,influxdb,alerting,dashboard,folder
     environment:
-      GRAFANA_URL: "http://grafana:3000"
+      GRAFANA_URL: "${GRAFANA_URL}"
     ports:
-      - "127.0.0.1:8000:8000"
+      - "${MCP_GRAFANA_PORT:-8000}:8000"
     volumes:
       - mcp-secrets:/secrets:ro
     networks:
@@ -180,7 +181,10 @@ services:
 
     networks:
       - factory-net
-  capturarr_impresora:
+    depends_on:
+      influxdb:
+        condition: service_healthy
+  capturar_impresora:
     build:
       context: ./sbd
       dockerfile: DockerFile
@@ -194,6 +198,47 @@ services:
 
     networks:
       - factory-net
+    depends_on:
+      influxdb:
+        condition: service_healthy
+
+  enviar_impresora:
+    build:
+      context: ./sbd
+      dockerfile: DockerFile
+    command: ["python", "scripts/exportar_datos_bambu.py"]
+    restart: unless-stopped
+    env_file:
+      - ./.env
+  
+    volumes:
+      - ./sbd/datos:/app/datos
+      - ./.env:/app/.env:ro
+
+    networks:
+      - factory-net
+    depends_on:
+      influxdb:
+        condition: service_healthy
+
+  enviar_dobot:
+    build:
+      context: ./sbd
+      dockerfile: DockerFile
+    command: ["python", "scripts/exportar_datos_dobot.py"]
+    restart: unless-stopped
+    env_file:
+      - ./.env
+  
+    volumes:
+      - ./sbd/datos:/app/datos
+      - ./.env:/app/.env:ro
+
+    networks:
+      - factory-net
+    depends_on:
+      influxdb:
+        condition: service_healthy
 
 networks:
   factory-net:

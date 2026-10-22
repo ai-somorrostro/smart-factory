@@ -9,7 +9,7 @@
     {
         "id": "eebb2fcb761e45c1",
         "type": "influxdb",
-        "hostname": "127.0.0.1",
+        "hostname": "${INFLUXDB_HOST}",
         "port": 8086,
         "protocol": "http",
         "database": "database",
@@ -17,9 +17,17 @@
         "usetls": false,
         "tls": "",
         "influxdbVersion": "2.0",
-        "url": "http://192.168.101.241:8086",
+        "url": "${INFLUXDB_URL}",
         "timeout": 10,
         "rejectUnauthorized": true
+    },
+    {
+        "id": "ec35a99ae510673e",
+        "type": "global-config",
+        "env": [],
+        "modules": {
+            "node-red-contrib-influxdb": "0.7.0"
+        }
     },
     {
         "id": "i_status",
@@ -142,7 +150,7 @@
         "type": "function",
         "z": "mir_multi_tab",
         "name": "preparar petición",
-        "func": "// Un mensaje por robot MiR para pedirle datos a la API.\n// Las IPs se ven aquí; el token (secreto) viene de una variable de entorno.\nconst robots = [\n    { id: 'mir1', host: '192.168.15.5', token: env.get('MIR1_TOKEN') },\n    { id: 'mir2', host: '192.168.15.15', token: env.get('MIR2_TOKEN') }\n];\n\n// guartadamos las peticiones por robot\nconst salida = [];\nfor (const r of robots) {\n    // Si falta el token, se salta ese robot\n    if (!r.token) continue;   // guardamos de que robot es\n    salida.push({\n        topic: msg.topic,        // endpoint a pedir (status, missions...)\n        robot_id: r.id,          // sirve luego como etiqueta en InfluxDB\n        url: 'http://' + r.host + '/api/v2.0.0/' + msg.topic,\n        headers: {\n            'Authorization': 'Basic ' + r.token,\n            'Accept-Language': 'en_US'\n        }\n    });\n}\n// Un mensaje por cada robot\nreturn [salida];\n\n\n\n",
+        "func": "// Un mensaje por robot MiR para pedirle datos a la API.\n// Las IPs se ven aquí; el token (secreto) viene de una variable de entorno.\nconst robots = [\n    { id: 'mir1', host: env.get('MIR1_IP'), token: env.get('MIR1_TOKEN') },\n    { id: 'mir2', host: env.get('MIR2_IP'), token: env.get('MIR2_TOKEN') }\n];\n\n// guartadamos las peticiones por robot\nconst salida = [];\nfor (const r of robots) {\n    // Si falta el token, se salta ese robot\n    if (!r.token) continue;   // guardamos de que robot es\n    salida.push({\n        topic: msg.topic,        // endpoint a pedir (status, missions...)\n        robot_id: r.id,          // sirve luego como etiqueta en InfluxDB\n        url: 'http://' + r.host + '/api/v2.0.0/' + msg.topic,\n        headers: {\n            'Authorization': 'Basic ' + r.token,\n            'Accept-Language': 'en_US'\n        }\n    });\n}\n// Un mensaje por cada robot\nreturn [salida];\n\n\n\n",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
@@ -232,8 +240,8 @@
         "database": "database",
         "precisionV18FluxV20": "ms",
         "retentionPolicyV18Flux": "",
-        "org": "smartek",
-        "bucket": "mir",
+        "org": "${INFLUXDB_ORG}",
+        "bucket": "${INFLUXDB_BUCKET_MIR}",
         "x": 1030,
         "y": 260,
         "wires": []
@@ -337,13 +345,5 @@
         "x": 960,
         "y": 380,
         "wires": []
-    },
-    {
-        "id": "ec35a99ae510673e",
-        "type": "global-config",
-        "env": [],
-        "modules": {
-            "node-red-contrib-influxdb": "0.7.0"
-        }
     }
 ]
